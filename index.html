@@ -1,0 +1,554 @@
+<title>Dice Tray</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=JetBrains+Mono:wght@400;700&family=Zilla+Slab:wght@600;700&display=swap">
+<style>
+  :root {
+    --ground:   #E4E7DC;
+    --felt:     #CBD2BE;
+    --rail:     #EFF1E9;
+    --edge:     #BAC2AD;
+    --edge-firm:#9BA68E;
+    --ink:      #1B211A;
+    --muted:    #5C6457;
+    --bone:     #FCFAF3;
+    --bone-dim: #E3DECD;
+    --pip:      #1F261D;
+    --brass:    #8A6013;
+    --blood:    #9E3A31;
+    --shadow:   rgba(27, 33, 26, .2);
+    --step--1: .78rem;
+    --step-0:  .95rem;
+    --step-1:  1.2rem;
+    --step-2:  1.7rem;
+    --step-3:  2.7rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:   #10150F;
+      --felt:     #1E2C21;
+      --rail:     #19211A;
+      --edge:     #2E3B2E;
+      --edge-firm:#44543F;
+      --ink:      #E9EBE1;
+      --muted:    #8E9B8A;
+      --bone:     #F2EEE2;
+      --bone-dim: #CBC5B1;
+      --pip:      #1B211A;
+      --brass:    #E0B34A;
+      --blood:    #D9614F;
+      --shadow:   rgba(0, 0, 0, .55);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:   #10150F;
+    --felt:     #1E2C21;
+    --rail:     #19211A;
+    --edge:     #2E3B2E;
+    --edge-firm:#44543F;
+    --ink:      #E9EBE1;
+    --muted:    #8E9B8A;
+    --bone:     #F2EEE2;
+    --bone-dim: #CBC5B1;
+    --pip:      #1B211A;
+    --brass:    #E0B34A;
+    --blood:    #D9614F;
+    --shadow:   rgba(0, 0, 0, .55);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font: 400 var(--step-0)/1.55 Archivo, system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: clamp(22px, 4vw, 46px) clamp(16px, 4vw, 32px) 60px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .masthead { display: flex; align-items: baseline; justify-content: space-between; gap: 16px 32px; flex-wrap: wrap; }
+  .wordmark { margin: 0; font: 700 var(--step-2)/1 "Zilla Slab", Georgia, serif; letter-spacing: -.01em; }
+  .tagline { margin: 0; color: var(--muted); font-size: var(--step--1); max-width: 44ch; }
+
+  .panel {
+    background: var(--rail);
+    border: 1px solid var(--edge);
+    border-radius: 3px;
+    padding: 16px 18px;
+  }
+  .label {
+    display: block;
+    font: 500 var(--step--1)/1 Archivo, sans-serif;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ---------- die silhouettes ---------- */
+  .s4   { clip-path: polygon(50% 2%, 98% 95%, 2% 95%); }
+  .s8   { clip-path: polygon(50% 1%, 97% 50%, 50% 99%, 3% 50%); }
+  .s10, .s100 { clip-path: polygon(50% 0%, 95% 34%, 50% 100%, 5% 34%); }
+  .s12  { clip-path: polygon(50% 0%, 97% 36%, 79% 98%, 21% 98%, 3% 36%); }
+  .s20  { clip-path: polygon(50% 0%, 94% 26%, 94% 74%, 50% 100%, 6% 74%, 6% 26%); }
+  .s6   { border-radius: 14%; }
+
+  .shape { position: relative; display: grid; place-items: center; }
+  .shape > .edge, .shape > .face, .shape > .facet { position: absolute; }
+  .shape > .edge  { inset: 0; background: var(--edge-firm); }
+  .shape > .face  { inset: 2px; background: var(--bone); }
+  .shape > .facet { background: var(--bone-dim); }
+
+  .facet.s4   { inset: 26% 16% 8%;  clip-path: polygon(50% 0%, 100% 100%, 0% 100%); }
+  .facet.s8   { inset: 22%; }
+  .facet.s10, .facet.s100 { inset: 24% 20% 14%; }
+  .facet.s12  { inset: 24% 20% 16%; }
+  .facet.s20  { inset: 20% 14% 22%; clip-path: polygon(50% 0%, 100% 100%, 0% 100%); }
+
+  .num {
+    position: relative;
+    z-index: 1;
+    color: var(--pip);
+    font: 700 1em/1 "JetBrains Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- picker ---------- */
+  .picker { display: flex; flex-direction: column; gap: 14px; }
+  .picker-row { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  .pick {
+    width: 72px;
+    padding: 6px 2px 5px;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    background: none;
+    color: var(--ink);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    transition: transform .12s ease, background .12s ease;
+  }
+  .pick:hover { background: var(--ground); transform: translateY(-2px); }
+  .pick:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+  .pick[data-active="1"] { border-color: var(--brass); }
+  .pick .shape { width: 46px; height: 46px; font-size: 13px; }
+  .pick .cap {
+    font: 400 11px/1 "JetBrains Mono", ui-monospace, monospace;
+    letter-spacing: .04em;
+    color: var(--muted);
+    display: flex;
+    gap: 5px;
+  }
+  .pick .cap b { color: var(--brass); font-weight: 700; }
+  .pick[data-active="1"] .cap { color: var(--ink); }
+
+  /* ---------- pool bar ---------- */
+  .pool-bar { display: flex; align-items: center; gap: 14px 20px; flex-wrap: wrap; justify-content: space-between; }
+  .notation {
+    font: 700 var(--step-1)/1.25 "JetBrains Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    word-break: break-word;
+  }
+  .notation.empty { color: var(--muted); font-weight: 400; }
+
+  .controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+  .mod { display: inline-flex; border: 1px solid var(--edge-firm); border-radius: 3px; overflow: hidden; background: var(--ground); }
+  .mod button { width: 34px; border: 0; background: none; color: var(--ink); font: 500 var(--step-1)/1 Archivo, sans-serif; cursor: pointer; }
+  .mod button:hover { background: var(--edge); }
+  .mod button:focus-visible { outline: 2px solid var(--brass); outline-offset: -3px; }
+  .mod .val {
+    min-width: 52px;
+    display: grid; place-items: center;
+    font: 700 var(--step-0)/1 "JetBrains Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    border-inline: 1px solid var(--edge-firm);
+  }
+
+  .btn {
+    border: 1px solid var(--edge-firm);
+    background: var(--ground);
+    color: var(--ink);
+    border-radius: 3px;
+    padding: 10px 16px;
+    font: 500 var(--step-0)/1 Archivo, sans-serif;
+    cursor: pointer;
+  }
+  .btn:hover { background: var(--edge); }
+  .btn:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+
+  .btn-roll {
+    background: var(--brass);
+    border-color: var(--brass);
+    color: var(--rail);
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    font-size: var(--step--1);
+    padding: 11px 26px;
+  }
+  .btn-roll:hover { background: var(--brass); filter: brightness(1.1); }
+  .btn-roll:disabled { opacity: .35; cursor: not-allowed; filter: none; }
+
+  /* ---------- tray ---------- */
+  .tray {
+    background: var(--felt);
+    border: 1px solid var(--edge-firm);
+    border-radius: 4px;
+    box-shadow: inset 0 2px 16px var(--shadow);
+    min-height: 236px;
+    padding: 26px 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 22px;
+  }
+  .tray-empty { margin: 0; text-align: center; color: var(--muted); }
+  .dice { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+
+  .die {
+    filter: drop-shadow(0 3px 6px var(--shadow));
+    animation: tumble .4s cubic-bezier(.2, .9, .3, 1.25) backwards;
+  }
+  .die .shape { width: 74px; height: 74px; font-size: var(--step-1); }
+  @keyframes tumble {
+    from { opacity: 0; transform: translateY(-24px) rotate(-22deg) scale(.82); }
+    to   { opacity: 1; transform: none; }
+  }
+  .die[data-shape="4"] .num  { transform: translateY(9px); }
+  .die[data-shape="20"] .num { transform: translateY(5px); }
+  .die[data-shape="12"] .num,
+  .die[data-shape="10"] .num,
+  .die[data-shape="100"] .num { transform: translateY(3px); }
+
+  .die[data-crit="max"] .face  { background: var(--brass); }
+  .die[data-crit="max"] .facet { background: var(--brass); filter: brightness(1.15); }
+  .die[data-crit="max"] .edge  { background: var(--brass); filter: brightness(.72); }
+  .die[data-crit="max"] .num   { color: var(--rail); }
+  .die[data-crit="max"] .pips i { background: var(--rail); }
+
+  .die[data-crit="min"] .face  { background: var(--blood); }
+  .die[data-crit="min"] .facet { background: var(--blood); filter: brightness(1.16); }
+  .die[data-crit="min"] .edge  { background: var(--blood); filter: brightness(.72); }
+  .die[data-crit="min"] .num   { color: var(--rail); }
+  .die[data-crit="min"] .pips i { background: var(--rail); }
+
+  /* pips */
+  .pips {
+    position: relative; z-index: 1;
+    display: grid;
+    grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+    width: 60%; height: 60%;
+  }
+  .pips i { width: 11px; height: 11px; border-radius: 50%; background: var(--pip); place-self: center; }
+  .pick .pips i { width: 6px; height: 6px; }
+
+  /* ---------- total ---------- */
+  .total-line {
+    display: flex; align-items: baseline; justify-content: center;
+    gap: 12px; flex-wrap: wrap;
+    border-top: 1px solid var(--edge-firm);
+    padding-top: 16px;
+  }
+  .total-math {
+    font: 400 var(--step--1)/1.4 "JetBrains Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+  .total-num {
+    font: 700 var(--step-3)/1 "Zilla Slab", Georgia, serif;
+    font-variant-numeric: tabular-nums;
+    color: var(--brass);
+  }
+
+  /* ---------- log ---------- */
+  .log { display: flex; flex-direction: column; gap: 10px; }
+  .log ol { list-style: none; margin: 0; padding: 0; }
+  .log li {
+    display: flex; align-items: baseline; gap: 16px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--edge);
+    font-variant-numeric: tabular-nums;
+  }
+  .log li:last-child { border-bottom: 0; }
+  .l-note  { font: 700 var(--step--1)/1.3 "JetBrains Mono", ui-monospace, monospace; min-width: 96px; }
+  .l-rolls { font: 400 var(--step--1)/1.4 "JetBrains Mono", ui-monospace, monospace; color: var(--muted); flex: 1; word-break: break-word; }
+  .l-total { font: 700 var(--step-0)/1 "JetBrains Mono", ui-monospace, monospace; color: var(--brass); }
+  .log-empty { margin: 0; color: var(--muted); font-size: var(--step--1); }
+
+  .hint { margin: 0; text-align: center; color: var(--muted); font-size: var(--step--1); }
+  kbd {
+    font: 700 11px/1 "JetBrains Mono", ui-monospace, monospace;
+    border: 1px solid var(--edge-firm);
+    border-radius: 3px;
+    padding: 3px 6px;
+    color: var(--ink);
+  }
+
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .die { animation: none; }
+    .pick { transition: none; }
+  }
+</style>
+
+<div class="page">
+  <header class="masthead">
+    <h1 class="wordmark">Dice Tray</h1>
+    <p class="tagline">Stack a pool, set a modifier, spill it on the felt. Naturals come up brass, ones come up red.</p>
+  </header>
+
+  <section class="panel picker" aria-label="Build a dice pool">
+    <span class="label">The set</span>
+    <div class="picker-row" id="picker"></div>
+  </section>
+
+  <section class="panel pool-bar" aria-label="Pool and controls">
+    <div class="notation empty" id="notation">no dice yet</div>
+    <div class="controls">
+      <div class="mod" role="group" aria-label="Modifier">
+        <button type="button" id="mod-down" aria-label="Decrease modifier">&minus;</button>
+        <span class="val" id="mod-val">+0</span>
+        <button type="button" id="mod-up" aria-label="Increase modifier">+</button>
+      </div>
+      <button type="button" class="btn" id="clear">Clear</button>
+      <button type="button" class="btn btn-roll" id="roll" disabled>Roll</button>
+    </div>
+  </section>
+
+  <section class="tray" id="tray" aria-live="polite"></section>
+
+  <p class="hint"><kbd>1</kbd>&ndash;<kbd>7</kbd> add a die &middot; <kbd>shift</kbd>-click to remove one &middot; <kbd>Enter</kbd> rolls &middot; <kbd>Esc</kbd> clears</p>
+
+  <section class="panel log" aria-label="Roll history">
+    <span class="label">Last rolls</span>
+    <p class="log-empty" id="log-empty">Nothing rolled yet.</p>
+    <ol id="log"></ol>
+  </section>
+</div>
+
+<script>
+  const SIDES = [4, 6, 8, 10, 12, 20, 100];
+  const FACE_MARK = { 4: '4', 6: '', 8: '8', 10: '10', 12: '12', 20: '20', 100: '00' };
+  const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+  const MAX_PER_TYPE = 30;
+
+  const pool = new Map(SIDES.map(s => [s, 0]));
+  let modifier = 0;
+  const history = [];
+
+  const $ = id => document.getElementById(id);
+  const picker = $('picker'), notation = $('notation'), tray = $('tray'),
+        rollBtn = $('roll'), modVal = $('mod-val'), logList = $('log'), logEmpty = $('log-empty');
+
+  /* Builds the layered silhouette: outline, face, inner facet, then the value. */
+  function buildShape(sides, value) {
+    const shape = document.createElement('span');
+    shape.className = 'shape';
+
+    const edge = document.createElement('span');
+    edge.className = 'edge s' + sides;
+    const face = document.createElement('span');
+    face.className = 'face s' + sides;
+    shape.append(edge, face);
+
+    if (sides !== 6) {
+      const facet = document.createElement('span');
+      facet.className = 'facet s' + sides;
+      shape.append(facet);
+    }
+
+    if (sides === 6 && value != null) {
+      const pips = document.createElement('span');
+      pips.className = 'pips';
+      const lit = new Set(PIPS[value]);
+      for (let i = 0; i < 9; i++) {
+        const dot = document.createElement('i');
+        if (!lit.has(i)) dot.style.visibility = 'hidden';
+        pips.append(dot);
+      }
+      shape.append(pips);
+    } else {
+      const num = document.createElement('span');
+      num.className = 'num';
+      num.textContent = value != null ? value : FACE_MARK[sides];
+      shape.append(num);
+    }
+    return shape;
+  }
+
+  /* ---------- picker ---------- */
+  SIDES.forEach((sides, i) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'pick';
+    btn.dataset.sides = sides;
+    btn.title = 'Add a d' + sides + ' (key ' + (i + 1) + ') · shift-click to remove';
+
+    const shape = buildShape(sides, sides === 6 ? 6 : null);
+    const cap = document.createElement('span');
+    cap.className = 'cap';
+    cap.append(document.createTextNode('d' + sides), document.createElement('b'));
+    btn.append(shape, cap);
+
+    btn.addEventListener('click', e => add(sides, e.shiftKey ? -1 : 1));
+    btn.addEventListener('contextmenu', e => { e.preventDefault(); add(sides, -1); });
+    picker.append(btn);
+  });
+
+  function add(sides, delta) {
+    pool.set(sides, Math.max(0, Math.min(MAX_PER_TYPE, pool.get(sides) + delta)));
+    sync();
+  }
+
+  function poolNotation() {
+    const parts = SIDES.filter(s => pool.get(s) > 0).map(s => pool.get(s) + 'd' + s);
+    if (!parts.length) return '';
+    return parts.join(' + ') + (modifier ? (modifier > 0 ? ' + ' : ' − ') + Math.abs(modifier) : '');
+  }
+
+  function sync() {
+    picker.querySelectorAll('.pick').forEach(btn => {
+      const n = pool.get(Number(btn.dataset.sides));
+      btn.dataset.active = n ? '1' : '0';
+      btn.querySelector('.cap b').textContent = n ? '×' + n : '';
+    });
+    const note = poolNotation();
+    notation.textContent = note || 'no dice yet';
+    notation.classList.toggle('empty', !note);
+    modVal.textContent = (modifier < 0 ? '−' : '+') + Math.abs(modifier);
+    rollBtn.disabled = !note;
+    save();
+  }
+
+  /* ---------- rolling ---------- */
+  function rollPool() {
+    const results = [];
+    SIDES.forEach(sides => {
+      for (let i = 0; i < pool.get(sides); i++) {
+        results.push({ sides, value: 1 + Math.floor(Math.random() * sides) });
+      }
+    });
+    if (!results.length) return;
+
+    const sum = results.reduce((acc, r) => acc + r.value, 0);
+    const total = sum + modifier;
+    showResults(results, sum, total);
+
+    history.unshift({ note: poolNotation(), results, total });
+    history.length = Math.min(history.length, 8);
+    renderLog();
+  }
+
+  function showResults(results, sum, total) {
+    const dice = document.createElement('div');
+    dice.className = 'dice';
+    const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    results.forEach((r, i) => {
+      const die = document.createElement('div');
+      die.className = 'die';
+      die.dataset.shape = r.sides;
+      if (r.value === r.sides) die.dataset.crit = 'max';
+      else if (r.value === 1) die.dataset.crit = 'min';
+      if (!still) die.style.animationDelay = Math.min(i * 45, 400) + 'ms';
+
+      die.append(buildShape(r.sides, r.value));
+
+      const spoken = document.createElement('span');
+      spoken.className = 'visually-hidden';
+      spoken.textContent = 'd' + r.sides + ' rolled ' + r.value + '. ';
+      die.append(spoken);
+      dice.append(die);
+    });
+
+    const line = document.createElement('div');
+    line.className = 'total-line';
+    const math = document.createElement('span');
+    math.className = 'total-math';
+    math.textContent = modifier
+      ? sum + (modifier > 0 ? ' + ' : ' − ') + Math.abs(modifier) + ' ='
+      : 'total';
+    const num = document.createElement('span');
+    num.className = 'total-num';
+    num.textContent = total;
+    line.append(math, num);
+
+    tray.replaceChildren(dice, line);
+  }
+
+  function emptyTray() {
+    const p = document.createElement('p');
+    p.className = 'tray-empty';
+    p.textContent = 'Pick your dice above, then roll.';
+    tray.replaceChildren(p);
+  }
+
+  function renderLog() {
+    logEmpty.hidden = history.length > 0;
+    logList.replaceChildren(...history.map(entry => {
+      const li = document.createElement('li');
+      const note = document.createElement('span');
+      note.className = 'l-note';
+      note.textContent = entry.note;
+      const rolls = document.createElement('span');
+      rolls.className = 'l-rolls';
+      rolls.textContent = entry.results.map(r => r.value).join('  ');
+      const total = document.createElement('span');
+      total.className = 'l-total';
+      total.textContent = entry.total;
+      li.append(note, rolls, total);
+      return li;
+    }));
+  }
+
+  /* ---------- controls ---------- */
+  rollBtn.addEventListener('click', rollPool);
+  $('mod-up').addEventListener('click', () => { modifier = Math.min(99, modifier + 1); sync(); });
+  $('mod-down').addEventListener('click', () => { modifier = Math.max(-99, modifier - 1); sync(); });
+  $('clear').addEventListener('click', () => {
+    SIDES.forEach(s => pool.set(s, 0));
+    modifier = 0;
+    emptyTray();
+    sync();
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key >= '1' && e.key <= '7') { add(SIDES[Number(e.key) - 1], e.shiftKey ? -1 : 1); e.preventDefault(); }
+    else if (e.key === 'Enter' && !rollBtn.disabled) { rollPool(); e.preventDefault(); }
+    else if (e.key === 'Escape') { $('clear').click(); }
+  });
+
+  /* ---------- remember the pool between visits ---------- */
+  function save() {
+    try {
+      localStorage.setItem('dice-tray', JSON.stringify({ pool: Object.fromEntries(pool), modifier }));
+    } catch (err) { /* storage blocked - the tray still works */ }
+  }
+  function load() {
+    try {
+      const data = JSON.parse(localStorage.getItem('dice-tray') || '{}');
+      SIDES.forEach(s => pool.set(s, Math.max(0, Math.min(MAX_PER_TYPE, Number(data.pool?.[s]) || 0))));
+      modifier = Math.max(-99, Math.min(99, Number(data.modifier) || 0));
+    } catch (err) { /* malformed or blocked - start from an empty pool */ }
+  }
+
+  load();
+  emptyTray();
+  sync();
+</script>
